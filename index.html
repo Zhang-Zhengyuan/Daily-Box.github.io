@@ -1,0 +1,1701 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DoreNexus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+            body: ['Noto Sans SC', 'Space Grotesk', 'sans-serif']
+          },
+          boxShadow: {
+            windowGlow: '0 0 0 1px rgba(148,163,184,.22), 0 30px 70px rgba(2,6,23,.58)'
+          },
+          colors: {
+            cblue: '#7dd3fc',
+            cmint: '#5eead4',
+            camb: '#fbbf24',
+            crose: '#fb7185'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      --mx: 50%;
+      --my: 50%;
+      --theme-bg-a: #020711;
+      --theme-bg-b: #081426;
+      --theme-bg-c: #040a16;
+      --theme-text: #dbeafe;
+      --theme-muted: #94a3b8;
+      --panel-bg: rgba(5, 12, 24, 0.72);
+      --panel-border: rgba(148, 163, 184, 0.22);
+      --titlebar-bg: linear-gradient(180deg, rgba(15, 23, 42, .96), rgba(4, 8, 18, .92));
+      --focus-a: rgba(125, 211, 252, 0.33);
+      --focus-b: rgba(94, 234, 212, 0.26);
+      --focus-c: rgba(251, 191, 36, 0.12);
+      --taskbar-bg: rgba(2, 6, 23, 0.68);
+      --taskbar-border: rgba(148, 163, 184, .26);
+      --module-inbox: #7dd3fc;
+      --module-project: #5eead4;
+      --module-cold: #94a3b8;
+      --module-planner: #fbbf24;
+      --module-vault: #fb7185;
+    }
+
+    body[data-theme='industrial'] {
+      --theme-bg-a: #101214;
+      --theme-bg-b: #1a2026;
+      --theme-bg-c: #0f1318;
+      --theme-text: #e5e7eb;
+      --theme-muted: #a0a7b2;
+      --panel-bg: rgba(24, 28, 35, 0.78);
+      --panel-border: rgba(148, 163, 184, 0.30);
+      --titlebar-bg: linear-gradient(180deg, rgba(30, 35, 44, .98), rgba(17, 22, 30, .95));
+      --focus-a: rgba(148, 163, 184, 0.30);
+      --focus-b: rgba(120, 130, 146, 0.24);
+      --focus-c: rgba(251, 191, 36, 0.10);
+      --taskbar-bg: rgba(16, 20, 26, 0.75);
+      --taskbar-border: rgba(148, 163, 184, 0.34);
+      --module-inbox: #93c5fd;
+      --module-project: #86efac;
+      --module-cold: #cbd5e1;
+      --module-planner: #facc15;
+      --module-vault: #fda4af;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+      color: var(--theme-text);
+      background:
+        radial-gradient(920px 580px at 8% -20%, var(--focus-a), transparent 56%),
+        radial-gradient(960px 560px at 100% 0%, var(--focus-b), transparent 55%),
+        linear-gradient(145deg, var(--theme-bg-a) 0%, var(--theme-bg-b) 48%, var(--theme-bg-c) 100%);
+      overflow-x: hidden;
+      transition: background 0.45s ease, color 0.35s ease;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .12;
+      z-index: -4;
+      background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .33) 1px, transparent 0);
+      background-size: 24px 24px;
+    }
+
+    .fluid-layer {
+      position: fixed;
+      inset: -30%;
+      z-index: -5;
+      pointer-events: none;
+      filter: blur(58px) saturate(122%);
+      opacity: .86;
+      mix-blend-mode: screen;
+      background:
+        radial-gradient(35% 35% at calc(var(--mx) - 14%) calc(var(--my) - 8%), rgba(125, 211, 252, 0.34), transparent 70%),
+        radial-gradient(40% 40% at calc(var(--mx) + 16%) calc(var(--my) + 12%), rgba(94, 234, 212, 0.30), transparent 72%),
+        radial-gradient(26% 26% at calc(var(--mx) + 2%) calc(var(--my) - 18%), var(--focus-c), transparent 74%);
+      animation: liquid-drift 16s ease-in-out infinite alternate;
+    }
+
+    .fluid-layer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        conic-gradient(from 0deg at 50% 50%, rgba(125, 211, 252, .2), rgba(94, 234, 212, .1), rgba(251, 191, 36, .07), rgba(125, 211, 252, .18));
+      animation: spin-slow 28s linear infinite;
+      opacity: .36;
+    }
+
+    .launcher-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      background: linear-gradient(160deg, rgba(15, 23, 42, .63), rgba(3, 8, 18, .54));
+      backdrop-filter: blur(12px);
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, .10), 0 14px 35px rgba(0, 0, 0, .36);
+      animation: rise .55s ease both;
+    }
+
+    .launcher-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(125, 211, 252, .45);
+      box-shadow: 0 0 0 1px rgba(125, 211, 252, .18), 0 24px 48px rgba(0, 0, 0, .4);
+    }
+
+    .launcher-card:active {
+      transform: scale(.992);
+    }
+
+    .launcher-card::after {
+      content: '';
+      position: absolute;
+      inset: auto -22% -68% -20%;
+      height: 96px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0));
+      transform: rotate(-5deg);
+      pointer-events: none;
+      opacity: .34;
+    }
+
+    .window-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 45;
+    }
+
+    .linux-window {
+      position: fixed;
+      border-radius: 15px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-bg);
+      box-shadow: var(--tw-shadow, 0 0 #0000), 0 0 0 1px rgba(148,163,184,.08), 0 30px 65px rgba(0,0,0,.56);
+      overflow: hidden;
+      pointer-events: auto;
+      min-width: 340px;
+      min-height: 260px;
+      touch-action: none;
+      animation: window-in .2s ease;
+      backdrop-filter: blur(16px);
+    }
+
+    .window-titlebar {
+      height: 44px;
+      border-bottom: 1px solid rgba(148,163,184,.24);
+      background: var(--titlebar-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      cursor: move;
+      user-select: none;
+    }
+
+    .traffic {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(2, 6, 23, .45);
+    }
+
+    .traffic.close {
+      background: #fb7185;
+    }
+
+    .traffic.min {
+      background: #fbbf24;
+    }
+
+    .traffic.max {
+      background: #5eead4;
+    }
+
+    .window-content {
+      height: calc(100% - 44px);
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .resize-grip {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      right: 2px;
+      bottom: 2px;
+      cursor: nwse-resize;
+      opacity: .72;
+      background:
+        linear-gradient(135deg, transparent 38%, rgba(148, 163, 184, .8) 40%, transparent 43%),
+        linear-gradient(135deg, transparent 56%, rgba(148, 163, 184, .6) 58%, transparent 61%),
+        linear-gradient(135deg, transparent 74%, rgba(148, 163, 184, .45) 76%, transparent 79%);
+      border-radius: 4px;
+    }
+
+    .taskbar {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: 8px;
+      border-radius: 14px;
+      border: 1px solid var(--taskbar-border);
+      background: var(--taskbar-bg);
+      backdrop-filter: blur(12px);
+      z-index: 70;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .panel {
+      border-radius: 13px;
+      border: 1px solid var(--panel-border);
+      background: rgba(3, 8, 18, .48);
+    }
+
+    .panel-head {
+      border-bottom: 1px solid rgba(148, 163, 184, .17);
+      background: rgba(15, 23, 42, .40);
+      border-top-left-radius: 13px;
+      border-top-right-radius: 13px;
+    }
+
+    .brain-grid {
+      background-image:
+        linear-gradient(rgba(148, 163, 184, .18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, .18) 1px, transparent 1px);
+      background-size: 22px 22px;
+      background-color: rgba(2, 6, 23, .58);
+    }
+
+    .timeline-line {
+      background: linear-gradient(180deg, rgba(125, 211, 252, .55), rgba(94, 234, 212, .16));
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: rgba(2, 6, 23, .45);
+      border-radius: 999px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: rgba(125, 211, 252, .45);
+      border-radius: 999px;
+    }
+
+    @keyframes liquid-drift {
+      from {
+        transform: translate3d(-2%, -1%, 0) rotate(-6deg);
+      }
+      to {
+        transform: translate3d(2%, 2%, 0) rotate(6deg);
+      }
+    }
+
+    @keyframes spin-slow {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes window-in {
+      from {
+        opacity: 0;
+        transform: scale(.98);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @media (max-width: 960px) {
+      .taskbar {
+        left: 8px;
+        right: 8px;
+        bottom: 6px;
+        grid-template-columns: 1fr;
+      }
+
+      .linux-window {
+        min-width: 0;
+        border-radius: 13px;
+      }
+
+      .window-titlebar {
+        cursor: default;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="fluid-layer"></div>
+
+  <div id="app" class="relative min-h-screen">
+    <main class="mx-auto w-full max-w-[1280px] px-4 pb-28 pt-8 md:px-8 md:pt-10">
+      <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="font-display text-[11px] uppercase tracking-[0.34em] text-slate-300/85">DoreNexus Workspace</p>
+          <h1 class="font-display text-3xl font-bold md:text-5xl">DoreNexus</h1>
+          <p class="mt-2 text-sm text-slate-300/90 md:text-base">模块化任务系统，按窗口打开，减少干扰并保持专注。</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-300/25 bg-slate-900/45 px-4 py-3 text-sm shadow-windowGlow backdrop-blur">
+          <p class="text-slate-200">工作区已保存: <span :class="isSaved ? 'text-emerald-300' : 'text-amber-300'">{{ isSaved ? '是' : '写入中' }}</span></p>
+          <p class="mt-1 text-xs text-slate-400">最近写入 {{ lastSavedAt || '--:--:--' }}</p>
+        </div>
+      </header>
+
+      <section class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <button
+          v-for="(item, idx) in launchers"
+          :key="item.id"
+          type="button"
+          class="launcher-card p-4 text-left"
+          :style="{ animationDelay: `${idx * .05}s` }"
+          @click="openWindow(item.id)"
+        >
+          <div class="mb-2 inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold" :style="tagStyle(item.id)">{{ item.badge }}</div>
+          <h2 class="font-display text-lg font-semibold">{{ item.title }}</h2>
+          <p class="mt-1 text-xs text-slate-400">{{ item.subtitle }}</p>
+          <div class="mt-3 text-xs text-slate-300">{{ moduleDigest(item.id) }}</div>
+        </button>
+      </section>
+
+      <section class="panel overflow-hidden">
+        <div class="panel-head px-4 py-3">
+          <p class="font-display text-sm text-slate-200">今日概览</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 p-4 md:grid-cols-3">
+          <div class="rounded-xl border border-cblue/30 bg-cblue/10 px-3 py-3">
+            <p class="text-xs uppercase tracking-widest text-cblue/90">任务推进均值</p>
+            <p class="mt-1 font-display text-2xl font-semibold text-cblue">{{ inboxMomentum }}%</p>
+          </div>
+          <div class="rounded-xl border border-cmint/30 bg-cmint/10 px-3 py-3">
+            <p class="text-xs uppercase tracking-widest text-cmint/90">并行计划数</p>
+            <p class="mt-1 font-display text-2xl font-semibold text-cmint">{{ state.project.plans.length }}</p>
+          </div>
+          <div class="rounded-xl border border-camb/30 bg-camb/10 px-3 py-3">
+            <p class="text-xs uppercase tracking-widest text-camb/90">Top3 完整度</p>
+            <p class="mt-1 font-display text-2xl font-semibold text-camb">{{ top3Filled }}/3</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="window-layer">
+      <article
+        v-for="win in sortedVisibleWindows"
+        :key="win.instanceId"
+        class="linux-window"
+        :style="windowStyle(win)"
+        @pointerdown="bringToFront(win.instanceId)"
+      >
+        <header class="window-titlebar" @pointerdown="startDragWindow(win, $event)">
+          <div class="flex items-center gap-2">
+            <button type="button" class="traffic close" aria-label="关闭" @click.stop="closeWindow(win.instanceId)"></button>
+            <button type="button" class="traffic min" aria-label="最小化" @click.stop="minimizeWindow(win.instanceId)"></button>
+            <span class="traffic max" aria-hidden="true"></span>
+          </div>
+
+          <div class="text-center">
+            <p class="font-display text-sm font-semibold text-slate-200">{{ windowMeta(win.moduleId).title }}</p>
+            <p class="text-[11px] text-slate-400">{{ windowMeta(win.moduleId).subtitle }}</p>
+          </div>
+
+          <div class="rounded-md border border-white/10 px-2 py-1 text-[11px]" :style="tagStyle(win.moduleId)">
+            {{ win.width }} x {{ win.height }}
+          </div>
+        </header>
+
+        <div class="window-content scrollbar-thin">
+          <section v-if="win.moduleId === 'inbox'" class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+            <div class="panel xl:col-span-4">
+              <div class="panel-head px-3 py-2">
+                <p class="text-xs uppercase tracking-widest text-slate-400">新任务录入</p>
+              </div>
+              <div class="space-y-3 p-3">
+                <div>
+                  <label class="mb-1 block text-xs text-slate-400">标题</label>
+                  <input v-model="state.inboxDraft.title" type="text" placeholder="例如：准备周会提纲" class="w-full rounded-xl border border-white/15 bg-slate-900/75 px-3 py-2 text-sm outline-none focus:border-cblue/70" />
+                </div>
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:grid-cols-1">
+                  <div>
+                    <label class="mb-1 block text-xs text-slate-400">优先级</label>
+                    <select v-model="state.inboxDraft.priority" class="w-full rounded-xl border border-white/15 bg-slate-900/75 px-3 py-2 text-sm outline-none focus:border-cblue/70">
+                      <option>P1</option>
+                      <option>P2</option>
+                      <option>P3</option>
+                      <option>P4</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-xs text-slate-400">进度 {{ state.inboxDraft.progress }}%</label>
+                    <input v-model.number="state.inboxDraft.progress" type="range" min="0" max="100" class="w-full accent-cblue" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-xs text-slate-400">截止日期</label>
+                    <input v-model="state.inboxDraft.ddl" type="date" class="w-full rounded-xl border border-white/15 bg-slate-900/75 px-3 py-2 text-sm outline-none focus:border-cblue/70" />
+                  </div>
+                </div>
+                <button @click="addInboxTask" class="w-full rounded-xl bg-cblue/90 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-cblue">加入收件箱</button>
+              </div>
+            </div>
+
+            <div class="panel xl:col-span-8">
+              <div class="panel-head flex items-center justify-between px-3 py-2">
+                <p class="text-xs uppercase tracking-widest text-slate-400">任务队列</p>
+                <span class="rounded-full border border-cblue/35 px-2 py-1 text-[11px] text-cblue">{{ state.inbox.length }} 项</span>
+              </div>
+              <div class="max-h-[560px] space-y-2 overflow-auto p-3 scrollbar-thin">
+                <div v-for="task in state.inbox" :key="task.id" class="rounded-xl border border-white/12 bg-slate-900/45 p-3">
+                  <div class="mb-2 flex items-center justify-between gap-2">
+                    <editable-text v-model="task.title" placeholder="点击编辑标题" class="flex-1"></editable-text>
+                    <button @click="removeInboxTask(task.id)" class="rounded-md border border-crose/35 px-2 py-1 text-xs text-crose hover:bg-crose/15">删除</button>
+                  </div>
+                  <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
+                    <div class="rounded-lg bg-slate-900/65 px-2 py-2">
+                      <p class="mb-1 text-[11px] text-slate-400">优先级</p>
+                      <select v-model="task.priority" class="w-full rounded-md border border-white/10 bg-slate-950/75 px-2 py-1 text-xs outline-none focus:border-cblue/70">
+                        <option>P1</option>
+                        <option>P2</option>
+                        <option>P3</option>
+                        <option>P4</option>
+                      </select>
+                    </div>
+                    <div class="rounded-lg bg-slate-900/65 px-2 py-2">
+                      <p class="mb-1 text-[11px] text-slate-400">进度</p>
+                      <editable-progress v-model="task.progress"></editable-progress>
+                    </div>
+                    <div class="rounded-lg bg-slate-900/65 px-2 py-2">
+                      <p class="mb-1 text-[11px] text-slate-400">日期</p>
+                      <editable-date v-model="task.ddl" placeholder="点击设置"></editable-date>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-else-if="win.moduleId === 'project'" class="space-y-4">
+            <div class="panel">
+              <div class="panel-head flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                <div>
+                  <p class="text-xs uppercase tracking-widest text-slate-400">计划池</p>
+                  <p class="text-[11px] text-slate-500">并行推进多个计划并随时切换。</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button @click="addProjectPlan" class="rounded-lg border border-cmint/35 px-3 py-1 text-xs text-cmint hover:bg-cmint/10">新建计划</button>
+                  <button @click="duplicateCurrentPlan" class="rounded-lg border border-cblue/35 px-3 py-1 text-xs text-cblue hover:bg-cblue/10">复制计划</button>
+                  <button @click="removeCurrentPlan" class="rounded-lg border border-crose/35 px-3 py-1 text-xs text-crose hover:bg-crose/10" :disabled="state.project.plans.length <= 1">删除计划</button>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 gap-2 p-3 md:grid-cols-[220px_1fr]">
+                <select v-model="state.project.currentPlanId" class="rounded-xl border border-white/15 bg-slate-900/75 px-3 py-2 text-sm outline-none focus:border-cmint/70">
+                  <option v-for="plan in state.project.plans" :key="plan.id" :value="plan.id">{{ plan.name }}</option>
+                </select>
+                <editable-text v-if="currentPlan" v-model="currentPlan.name" placeholder="点击编辑计划名称"></editable-text>
+              </div>
+            </div>
+
+            <div v-if="currentPlan" class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+              <div class="panel xl:col-span-7">
+                <div class="panel-head flex items-center justify-between px-3 py-2">
+                  <p class="text-xs uppercase tracking-widest text-slate-400">草稿白板</p>
+                  <button @click="addBrainNode" class="rounded-lg border border-cmint/35 px-3 py-1 text-xs text-cmint hover:bg-cmint/10">新增节点</button>
+                </div>
+                <div ref="boardRef" class="brain-grid relative h-[380px] overflow-hidden rounded-b-[13px]">
+                  <div
+                    v-for="node in currentPlan.nodes"
+                    :key="node.id"
+                    class="absolute w-[190px] cursor-grab rounded-xl border border-cmint/25 bg-slate-950/75 p-2 shadow-windowGlow"
+                    :style="{ left: node.x + 'px', top: node.y + 'px' }"
+                    @pointerdown="startDragNode(node, $event)"
+                  >
+                    <div class="mb-1 flex items-center justify-between">
+                      <span class="text-[10px] uppercase tracking-widest text-cmint/85">Node</span>
+                      <button @click.stop="removeBrainNode(node.id)" class="rounded-md border border-crose/35 px-1.5 py-0.5 text-[10px] text-crose hover:bg-crose/10">删</button>
+                    </div>
+                    <editable-text v-model="node.text" :multiline="true" placeholder="点击编辑节点"></editable-text>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel xl:col-span-5">
+                <div class="panel-head flex items-center justify-between px-3 py-2">
+                  <p class="text-xs uppercase tracking-widest text-slate-400">里程碑时间线</p>
+                  <button @click="addMilestone" class="rounded-lg border border-cblue/35 px-3 py-1 text-xs text-cblue hover:bg-cblue/10">新增里程碑</button>
+                </div>
+                <div class="relative max-h-[380px] overflow-auto p-3 scrollbar-thin">
+                  <div class="timeline-line absolute bottom-4 left-5 top-4 w-px"></div>
+                  <div v-for="mile in currentPlan.milestones" :key="mile.id" class="relative mb-3 pl-8">
+                    <span class="absolute left-[13px] top-3 h-2.5 w-2.5 rounded-full" :class="milestoneDot(mile.status)"></span>
+                    <div class="rounded-xl border border-white/12 bg-slate-900/55 p-2">
+                      <div class="mb-1 flex items-center justify-between gap-2">
+                        <editable-text v-model="mile.title" placeholder="点击编辑里程碑" class="flex-1"></editable-text>
+                        <button @click="removeMilestone(mile.id)" class="rounded-md border border-crose/35 px-1.5 py-0.5 text-[10px] text-crose hover:bg-crose/10">删</button>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <editable-date v-model="mile.date" placeholder="日期"></editable-date>
+                        <select v-model="mile.status" class="rounded-md border border-white/12 bg-slate-950/85 px-2 py-1 text-xs outline-none focus:border-cblue/65">
+                          <option value="planned">Planned</option>
+                          <option value="doing">Doing</option>
+                          <option value="done">Done</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-else-if="win.moduleId === 'cold'" class="panel">
+            <div class="panel-head flex items-center justify-between px-3 py-2">
+              <p class="text-xs uppercase tracking-widest text-slate-400">冷存储</p>
+              <span class="rounded-full border border-slate-500/65 px-2 py-1 text-[11px] text-slate-300">{{ state.coldStorage.length }} 项</span>
+            </div>
+            <div class="p-3">
+              <div class="mb-3 flex gap-2">
+                <input v-model="coldDraft.title" type="text" placeholder="新增长期想法" class="flex-1 rounded-xl border border-slate-500/60 bg-slate-950/72 px-3 py-2 text-sm text-slate-200 outline-none focus:border-slate-300" />
+                <button @click="addColdItem" class="rounded-xl border border-slate-400/65 px-3 py-2 text-xs text-slate-200 hover:bg-slate-700/40">加入</button>
+              </div>
+              <div class="max-h-[560px] space-y-2 overflow-auto pr-1 scrollbar-thin">
+                <div v-for="idea in state.coldStorage" :key="idea.id" class="rounded-xl border border-slate-600/65 bg-slate-950/70 p-3">
+                  <div class="mb-1 flex items-center justify-between gap-2">
+                    <editable-text v-model="idea.title" placeholder="点击编辑"></editable-text>
+                    <button @click="removeColdItem(idea.id)" class="rounded-md border border-slate-500/80 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-700/45">删</button>
+                  </div>
+                  <editable-text v-model="idea.note" :multiline="true" placeholder="补充说明"></editable-text>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-else-if="win.moduleId === 'planner'" class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+            <div class="panel xl:col-span-8">
+              <div class="panel-head flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                <p class="text-xs uppercase tracking-widest text-slate-400">周 / 月计划</p>
+                <div class="inline-flex rounded-lg border border-camb/35 bg-slate-900/55 p-1">
+                  <button @click="state.planner.mode = 'week'" class="rounded-md px-3 py-1 text-xs" :class="state.planner.mode === 'week' ? 'bg-camb text-slate-950' : 'text-slate-300 hover:bg-white/10'">周视图</button>
+                  <button @click="state.planner.mode = 'month'" class="rounded-md px-3 py-1 text-xs" :class="state.planner.mode === 'month' ? 'bg-camb text-slate-950' : 'text-slate-300 hover:bg-white/10'">月视图</button>
+                </div>
+              </div>
+              <div class="p-3">
+                <div v-if="state.planner.mode === 'week'" class="space-y-2">
+                  <div v-for="slot in state.planner.week" :key="slot.id" class="grid grid-cols-[66px_1fr_auto] items-center gap-2 rounded-xl border border-white/10 bg-slate-900/45 px-2 py-2">
+                    <span class="text-xs text-camb/95">{{ slot.day }}</span>
+                    <editable-text v-model="slot.focus" placeholder="点击编辑安排"></editable-text>
+                    <button @click="removeWeekSlot(slot.id)" class="rounded-md border border-white/10 px-2 py-1 text-[10px] text-slate-300 hover:bg-white/10">删</button>
+                  </div>
+                  <button @click="addWeekSlot" class="rounded-lg border border-camb/45 px-3 py-1 text-xs text-camb hover:bg-camb/10">新增一天</button>
+                </div>
+                <div v-else class="space-y-2">
+                  <div v-for="slot in state.planner.month" :key="slot.id" class="grid grid-cols-[128px_1fr_auto] items-center gap-2 rounded-xl border border-white/10 bg-slate-900/45 px-2 py-2">
+                    <editable-date v-model="slot.date" placeholder="日期"></editable-date>
+                    <editable-text v-model="slot.focus" placeholder="点击编辑计划"></editable-text>
+                    <button @click="removeMonthSlot(slot.id)" class="rounded-md border border-white/10 px-2 py-1 text-[10px] text-slate-300 hover:bg-white/10">删</button>
+                  </div>
+                  <button @click="addMonthSlot" class="rounded-lg border border-camb/45 px-3 py-1 text-xs text-camb hover:bg-camb/10">新增日期</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel xl:col-span-4">
+              <div class="panel-head flex items-center justify-between px-3 py-2">
+                <p class="text-xs uppercase tracking-widest text-camb/90">Top 3</p>
+                <button @click="addTop3" class="rounded-md border border-camb/45 px-2 py-1 text-[11px] text-camb hover:bg-camb/10" :disabled="state.planner.top3.length >= 3">新增</button>
+              </div>
+              <div class="space-y-2 p-3">
+                <div v-for="(item, idx) in state.planner.top3" :key="item.id" class="rounded-xl border border-white/10 bg-slate-900/55 p-2">
+                  <div class="mb-1 flex items-center justify-between">
+                    <span class="text-[11px] text-camb">#{{ idx + 1 }}</span>
+                    <button @click="removeTop3(item.id)" class="rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-white/10">删</button>
+                  </div>
+                  <editable-text v-model="item.text" :multiline="true" placeholder="输入关键任务"></editable-text>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-else-if="win.moduleId === 'vault'" class="panel">
+            <div class="panel-head px-3 py-2">
+              <p class="text-xs uppercase tracking-widest text-slate-400">跨设备同步与备份</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 p-3 xl:grid-cols-12">
+              <div class="space-y-3 xl:col-span-7">
+                <p class="text-sm text-slate-300">同步码可跨设备手动迁移：在设备 A 生成并复制，在设备 B 粘贴后导入。</p>
+                <textarea v-model="state.sync.syncCode" rows="7" placeholder="同步码区域" class="w-full rounded-xl border border-white/15 bg-slate-950/78 px-3 py-2 text-xs text-slate-100 outline-none focus:border-crose/65"></textarea>
+                <div class="flex flex-wrap gap-2">
+                  <button @click="generateSyncCode" class="rounded-lg border border-crose/40 px-3 py-1.5 text-xs text-crose hover:bg-crose/10">生成并复制同步码</button>
+                  <button @click="applySyncCode" class="rounded-lg border border-cblue/40 px-3 py-1.5 text-xs text-cblue hover:bg-cblue/10">应用同步码</button>
+                </div>
+              </div>
+
+              <div class="space-y-3 xl:col-span-5">
+                <p class="text-sm text-slate-300">备份文件可长期保存，支持导出 JSON 与导入恢复。</p>
+                <div class="grid grid-cols-1 gap-2">
+                  <button @click="exportBackupFile" class="rounded-lg border border-cmint/40 px-3 py-2 text-xs text-cmint hover:bg-cmint/10">导出备份文件</button>
+                  <button @click="triggerImportFile" class="rounded-lg border border-camb/45 px-3 py-2 text-xs text-camb hover:bg-camb/10">导入备份文件</button>
+                </div>
+                <p class="text-xs text-slate-400">本地自动保存 + 同步码 + 备份文件，可覆盖手机、平板、电脑多端使用场景。</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <span v-if="!isMobile" class="resize-grip" @pointerdown.stop="startResizeWindow(win, $event)"></span>
+      </article>
+    </section>
+
+    <footer class="taskbar">
+      <div class="flex items-center gap-2">
+        <span class="rounded-lg border border-white/15 bg-slate-950/45 px-2 py-1 text-xs font-semibold">DoreNexus</span>
+        <button @click="toggleTheme" class="rounded-lg border border-white/15 bg-slate-900/45 px-2 py-1 text-xs text-slate-200 hover:bg-white/10">
+          主题: {{ state.ui.theme === 'deepsea' ? '深海极简' : '冷灰工业' }}
+        </button>
+      </div>
+
+      <div class="flex min-w-0 items-center gap-2 overflow-x-auto">
+        <button
+          v-for="win in sortedTaskbarWindows"
+          :key="win.instanceId"
+          @click="toggleWindowFromTaskbar(win.instanceId)"
+          class="shrink-0 rounded-lg border px-2 py-1 text-xs"
+          :style="taskbarButtonStyle(win)"
+        >
+          {{ windowMeta(win.moduleId).short }} {{ win.minimized ? '(最小化)' : '' }}
+        </button>
+      </div>
+
+      <div class="flex items-center justify-end gap-2">
+        <button @click="openWindow('vault')" class="rounded-lg border border-crose/35 bg-crose/10 px-2 py-1 text-xs text-crose hover:bg-crose/18">同步库</button>
+      </div>
+    </footer>
+
+    <input ref="importFileRef" type="file" class="hidden" accept="application/json" @change="onImportFile" />
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script>
+    const { createApp, reactive, ref, watch, onMounted, onBeforeUnmount, computed } = Vue;
+
+    const EditableText = {
+      props: {
+        modelValue: { type: String, default: '' },
+        placeholder: { type: String, default: '点击编辑' },
+        multiline: { type: Boolean, default: false }
+      },
+      emits: ['update:modelValue'],
+      data() {
+        return {
+          editing: false,
+          draft: this.modelValue || ''
+        };
+      },
+      watch: {
+        modelValue(next) {
+          if (!this.editing) {
+            this.draft = next || '';
+          }
+        }
+      },
+      methods: {
+        start() {
+          this.editing = true;
+          this.$nextTick(() => {
+            const field = this.$refs.field;
+            if (field) {
+              field.focus();
+              if (field.select) {
+                field.select();
+              }
+            }
+          });
+        },
+        commit() {
+          this.editing = false;
+          this.$emit('update:modelValue', (this.draft || '').trim());
+        },
+        cancel() {
+          this.editing = false;
+          this.draft = this.modelValue || '';
+        }
+      },
+      template: `
+        <div class="w-full">
+          <button
+            v-if="!editing"
+            type="button"
+            class="w-full rounded-lg px-2 py-1 text-left text-sm transition hover:bg-white/10"
+            @click="start"
+          >
+            <span v-if="modelValue">{{ modelValue }}</span>
+            <span v-else class="text-slate-400">{{ placeholder }}</span>
+          </button>
+          <textarea
+            v-else-if="multiline"
+            ref="field"
+            v-model="draft"
+            rows="2"
+            class="w-full rounded-lg border border-cblue/50 bg-slate-950/85 px-2 py-1 text-sm text-slate-100 outline-none"
+            @blur="commit"
+            @keydown.enter.exact.prevent="commit"
+            @keydown.esc="cancel"
+          ></textarea>
+          <input
+            v-else
+            ref="field"
+            v-model="draft"
+            type="text"
+            class="w-full rounded-lg border border-cblue/50 bg-slate-950/85 px-2 py-1 text-sm text-slate-100 outline-none"
+            @blur="commit"
+            @keydown.enter.prevent="commit"
+            @keydown.esc="cancel"
+          />
+        </div>
+      `
+    };
+
+    const EditableDate = {
+      props: {
+        modelValue: { type: String, default: '' },
+        placeholder: { type: String, default: '点击编辑日期' }
+      },
+      emits: ['update:modelValue'],
+      data() {
+        return {
+          editing: false,
+          draft: this.modelValue || ''
+        };
+      },
+      watch: {
+        modelValue(next) {
+          if (!this.editing) {
+            this.draft = next || '';
+          }
+        }
+      },
+      methods: {
+        start() {
+          this.editing = true;
+          this.$nextTick(() => {
+            const field = this.$refs.field;
+            if (field) {
+              field.focus();
+            }
+          });
+        },
+        commit() {
+          this.editing = false;
+          this.$emit('update:modelValue', this.draft || '');
+        },
+        cancel() {
+          this.editing = false;
+          this.draft = this.modelValue || '';
+        }
+      },
+      template: `
+        <div>
+          <button
+            v-if="!editing"
+            type="button"
+            class="w-full rounded-lg px-2 py-1 text-left text-xs transition hover:bg-white/10"
+            @click="start"
+          >
+            <span v-if="modelValue">{{ modelValue }}</span>
+            <span v-else class="text-slate-400">{{ placeholder }}</span>
+          </button>
+          <input
+            v-else
+            ref="field"
+            v-model="draft"
+            type="date"
+            class="w-full rounded-lg border border-cblue/50 bg-slate-950/85 px-2 py-1 text-xs outline-none"
+            @blur="commit"
+            @change="commit"
+            @keydown.enter.prevent="commit"
+            @keydown.esc="cancel"
+          />
+        </div>
+      `
+    };
+
+    const EditableProgress = {
+      props: {
+        modelValue: { type: Number, default: 0 }
+      },
+      emits: ['update:modelValue'],
+      data() {
+        return {
+          editing: false,
+          draft: Number.isFinite(this.modelValue) ? this.modelValue : 0
+        };
+      },
+      watch: {
+        modelValue(next) {
+          if (!this.editing) {
+            this.draft = Number.isFinite(next) ? next : 0;
+          }
+        }
+      },
+      methods: {
+        start() {
+          this.editing = true;
+        },
+        commit() {
+          this.editing = false;
+          const safe = Math.max(0, Math.min(100, Number(this.draft) || 0));
+          this.$emit('update:modelValue', safe);
+        },
+        cancel() {
+          this.editing = false;
+          this.draft = Number.isFinite(this.modelValue) ? this.modelValue : 0;
+        }
+      },
+      template: `
+        <div>
+          <button
+            v-if="!editing"
+            type="button"
+            class="w-full rounded-lg px-2 py-1 text-left transition hover:bg-white/10"
+            @click="start"
+          >
+            <div class="mb-1 text-xs text-slate-300">{{ modelValue }}%</div>
+            <div class="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+              <div class="h-full rounded-full bg-cblue transition-all" :style="{ width: modelValue + '%' }"></div>
+            </div>
+          </button>
+          <div v-else class="space-y-1 rounded-lg bg-slate-950/70 px-2 py-1">
+            <input
+              v-model.number="draft"
+              type="range"
+              min="0"
+              max="100"
+              class="w-full accent-cblue"
+              @blur="commit"
+              @change="commit"
+              @keydown.enter.prevent="commit"
+              @keydown.esc="cancel"
+            />
+            <p class="text-xs text-slate-300">{{ draft }}%</p>
+          </div>
+        </div>
+      `
+    };
+
+    const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+    const createDefaultPlan = (name) => ({
+      id: createId(),
+      name,
+      nodes: [
+        { id: createId(), text: '定义目标和边界', x: 24, y: 22 },
+        { id: createId(), text: '拆解关键里程碑', x: 250, y: 78 }
+      ],
+      milestones: [
+        { id: createId(), title: 'M1: 启动', date: '', status: 'planned' },
+        { id: createId(), title: 'M2: 验证', date: '', status: 'doing' }
+      ]
+    });
+
+    const windowPreset = (moduleId, index) => {
+      const base = {
+        inbox: { width: 900, height: 620, x: 80, y: 86 },
+        project: { width: 980, height: 660, x: 130, y: 94 },
+        cold: { width: 620, height: 560, x: 220, y: 120 },
+        planner: { width: 860, height: 610, x: 170, y: 112 },
+        vault: { width: 760, height: 540, x: 200, y: 124 }
+      };
+      const p = base[moduleId] || base.inbox;
+      return {
+        width: p.width,
+        height: p.height,
+        x: p.x + index * 26,
+        y: p.y + index * 22
+      };
+    };
+
+    const createDefaultState = () => {
+      const planA = createDefaultPlan('主线产品计划');
+      const planB = createDefaultPlan('学习 / 研究计划');
+      return {
+        ui: {
+          theme: 'deepsea',
+          windows: []
+        },
+        sync: {
+          syncCode: ''
+        },
+        inboxDraft: {
+          title: '',
+          priority: 'P2',
+          progress: 20,
+          ddl: ''
+        },
+        inbox: [
+          { id: createId(), title: '完成本周目标拆解', priority: 'P1', progress: 52, ddl: '2026-03-16' },
+          { id: createId(), title: '整理里程碑风险与对策', priority: 'P2', progress: 34, ddl: '2026-03-18' }
+        ],
+        project: {
+          currentPlanId: planA.id,
+          plans: [planA, planB]
+        },
+        coldStorage: [
+          { id: createId(), title: '未来功能: 任务模板市场', note: '收集高频模板，减少重复规划。' }
+        ],
+        planner: {
+          mode: 'week',
+          week: [
+            { id: createId(), day: '周一', focus: '确认优先级与时间块' },
+            { id: createId(), day: '周二', focus: '推进核心任务' },
+            { id: createId(), day: '周三', focus: '复盘与修正' },
+            { id: createId(), day: '周四', focus: '补齐里程碑缺口' },
+            { id: createId(), day: '周五', focus: '产出与归档' }
+          ],
+          month: [
+            { id: createId(), date: '2026-03-20', focus: '阶段版本上线' },
+            { id: createId(), date: '2026-03-29', focus: '月末总结' }
+          ],
+          top3: [
+            { id: createId(), text: '完成 2 个高优任务' },
+            { id: createId(), text: '推进 1 个里程碑到 Done' },
+            { id: createId(), text: '固定复盘节奏并执行' }
+          ]
+        }
+      };
+    };
+
+    const deepMerge = (target, source) => {
+      if (!source || typeof source !== 'object') {
+        return;
+      }
+      Object.keys(source).forEach((key) => {
+        const value = source[key];
+        if (Array.isArray(value)) {
+          target[key] = value;
+          return;
+        }
+        if (value && typeof value === 'object') {
+          if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+            target[key] = {};
+          }
+          deepMerge(target[key], value);
+          return;
+        }
+        target[key] = value;
+      });
+    };
+
+    createApp({
+      components: {
+        EditableText,
+        EditableDate,
+        EditableProgress
+      },
+      setup() {
+        const STORAGE_KEY = 'dorenexus-workspace-v3';
+        const state = reactive(createDefaultState());
+        const boardRef = ref(null);
+        const importFileRef = ref(null);
+        const coldDraft = reactive({ title: '' });
+        const isSaved = ref(true);
+        const lastSavedAt = ref('');
+        const viewportWidth = ref(window.innerWidth);
+        const zCounter = ref(12);
+
+        const action = reactive({
+          mode: null,
+          targetWindowId: null,
+          startX: 0,
+          startY: 0,
+          startWinX: 0,
+          startWinY: 0,
+          startWidth: 0,
+          startHeight: 0,
+          nodeId: null,
+          nodeOffsetX: 0,
+          nodeOffsetY: 0
+        });
+
+        const launchers = [
+          { id: 'inbox', title: 'Inbox', subtitle: '任务捕获与执行队列', badge: '任务' },
+          { id: 'project', title: 'Project Hub', subtitle: '多计划并行推进', badge: '项目' },
+          { id: 'cold', title: 'Cold Storage', subtitle: '长期想法收纳区', badge: '冷存储' },
+          { id: 'planner', title: 'Time Planner', subtitle: '周/月规划与 Top3', badge: '计划' },
+          { id: 'vault', title: 'Sync Vault', subtitle: '跨设备同步与备份', badge: '同步' }
+        ];
+
+        const isMobile = computed(() => viewportWidth.value <= 960);
+
+        const sortedVisibleWindows = computed(() => {
+          return state.ui.windows
+            .filter((item) => !item.minimized)
+            .slice()
+            .sort((a, b) => a.z - b.z);
+        });
+
+        const sortedTaskbarWindows = computed(() => {
+          return state.ui.windows.slice().sort((a, b) => a.z - b.z);
+        });
+
+        const currentPlan = computed(() => {
+          return state.project.plans.find((p) => p.id === state.project.currentPlanId) || null;
+        });
+
+        const inboxMomentum = computed(() => {
+          if (!state.inbox.length) {
+            return 0;
+          }
+          const total = state.inbox.reduce((sum, item) => sum + (Number(item.progress) || 0), 0);
+          return Math.round(total / state.inbox.length);
+        });
+
+        const top3Filled = computed(() => {
+          return state.planner.top3.filter((item) => item.text && item.text.trim()).length;
+        });
+
+        const windowMeta = (moduleId) => {
+          const map = {
+            inbox: { title: 'Inbox 收件箱', subtitle: '快速输入 + 即时编辑', short: 'Inbox' },
+            project: { title: 'Project Hub', subtitle: '并行计划 + 白板路线图', short: 'Project' },
+            cold: { title: 'Cold Storage', subtitle: '长期想法低干扰保存', short: 'Cold' },
+            planner: { title: 'Time Planner', subtitle: '周月协同与三件要事', short: 'Planner' },
+            vault: { title: 'Sync Vault', subtitle: '跨设备迁移与备份恢复', short: 'Vault' }
+          };
+          return map[moduleId] || map.inbox;
+        };
+
+        const tagStyle = (moduleId) => {
+          const colors = {
+            inbox: { text: 'var(--module-inbox)', border: 'rgba(125,211,252,.45)', bg: 'rgba(125,211,252,.12)' },
+            project: { text: 'var(--module-project)', border: 'rgba(94,234,212,.45)', bg: 'rgba(94,234,212,.12)' },
+            cold: { text: 'var(--module-cold)', border: 'rgba(148,163,184,.45)', bg: 'rgba(148,163,184,.12)' },
+            planner: { text: 'var(--module-planner)', border: 'rgba(251,191,36,.45)', bg: 'rgba(251,191,36,.12)' },
+            vault: { text: 'var(--module-vault)', border: 'rgba(251,113,133,.45)', bg: 'rgba(251,113,133,.12)' }
+          };
+          const c = colors[moduleId] || colors.inbox;
+          return {
+            color: c.text,
+            border: `1px solid ${c.border}`,
+            background: c.bg
+          };
+        };
+
+        const moduleDigest = (moduleId) => {
+          if (moduleId === 'inbox') {
+            return `${state.inbox.length} 项任务`;
+          }
+          if (moduleId === 'project') {
+            return `${state.project.plans.length} 个计划`;
+          }
+          if (moduleId === 'cold') {
+            return `${state.coldStorage.length} 条想法`;
+          }
+          if (moduleId === 'planner') {
+            return `${top3Filled.value}/3 已填写`;
+          }
+          return '同步码 + 备份文件';
+        };
+
+        const ensurePlanSelection = () => {
+          if (!state.project.plans.length) {
+            const fallback = createDefaultPlan('默认计划');
+            state.project.plans.push(fallback);
+            state.project.currentPlanId = fallback.id;
+            return;
+          }
+          const exists = state.project.plans.some((plan) => plan.id === state.project.currentPlanId);
+          if (!exists) {
+            state.project.currentPlanId = state.project.plans[0].id;
+          }
+        };
+
+        const nextZ = () => {
+          zCounter.value += 1;
+          return zCounter.value;
+        };
+
+        const openWindow = (moduleId) => {
+          const existing = state.ui.windows.find((item) => item.moduleId === moduleId);
+          if (existing) {
+            existing.minimized = false;
+            existing.z = nextZ();
+            return;
+          }
+
+          const preset = windowPreset(moduleId, state.ui.windows.length);
+          state.ui.windows.push({
+            instanceId: createId(),
+            moduleId,
+            x: preset.x,
+            y: preset.y,
+            width: preset.width,
+            height: preset.height,
+            minimized: false,
+            z: nextZ()
+          });
+        };
+
+        const closeWindow = (instanceId) => {
+          state.ui.windows = state.ui.windows.filter((item) => item.instanceId !== instanceId);
+        };
+
+        const minimizeWindow = (instanceId) => {
+          const win = state.ui.windows.find((item) => item.instanceId === instanceId);
+          if (!win) {
+            return;
+          }
+          win.minimized = true;
+        };
+
+        const bringToFront = (instanceId) => {
+          const win = state.ui.windows.find((item) => item.instanceId === instanceId);
+          if (!win) {
+            return;
+          }
+          win.z = nextZ();
+        };
+
+        const toggleWindowFromTaskbar = (instanceId) => {
+          const win = state.ui.windows.find((item) => item.instanceId === instanceId);
+          if (!win) {
+            return;
+          }
+          if (win.minimized) {
+            win.minimized = false;
+            win.z = nextZ();
+            return;
+          }
+          const top = sortedVisibleWindows.value[sortedVisibleWindows.value.length - 1];
+          if (top && top.instanceId === win.instanceId && sortedVisibleWindows.value.length > 1) {
+            win.minimized = true;
+            return;
+          }
+          win.z = nextZ();
+        };
+
+        const windowStyle = (win) => {
+          if (isMobile.value) {
+            return {
+              left: '8px',
+              top: '80px',
+              width: 'calc(100vw - 16px)',
+              height: 'calc(100vh - 148px)',
+              zIndex: win.z
+            };
+          }
+          return {
+            left: `${win.x}px`,
+            top: `${win.y}px`,
+            width: `${win.width}px`,
+            height: `${win.height}px`,
+            zIndex: win.z
+          };
+        };
+
+        const taskbarButtonStyle = (win) => {
+          const active = !win.minimized;
+          return {
+            color: active ? 'var(--theme-text)' : 'var(--theme-muted)',
+            borderColor: active ? 'rgba(125,211,252,.4)' : 'rgba(148,163,184,.26)',
+            background: active ? 'rgba(125,211,252,.12)' : 'rgba(15,23,42,.36)'
+          };
+        };
+
+        const startDragWindow = (win, event) => {
+          if (isMobile.value) {
+            return;
+          }
+          action.mode = 'drag-window';
+          action.targetWindowId = win.instanceId;
+          action.startX = event.clientX;
+          action.startY = event.clientY;
+          action.startWinX = win.x;
+          action.startWinY = win.y;
+          bringToFront(win.instanceId);
+        };
+
+        const startResizeWindow = (win, event) => {
+          if (isMobile.value) {
+            return;
+          }
+          action.mode = 'resize-window';
+          action.targetWindowId = win.instanceId;
+          action.startX = event.clientX;
+          action.startY = event.clientY;
+          action.startWidth = win.width;
+          action.startHeight = win.height;
+          bringToFront(win.instanceId);
+        };
+
+        const startDragNode = (node, event) => {
+          if (!boardRef.value) {
+            return;
+          }
+          const rect = boardRef.value.getBoundingClientRect();
+          action.mode = 'drag-node';
+          action.nodeId = node.id;
+          action.nodeOffsetX = event.clientX - rect.left - node.x;
+          action.nodeOffsetY = event.clientY - rect.top - node.y;
+        };
+
+        const stopPointerAction = () => {
+          action.mode = null;
+          action.targetWindowId = null;
+          action.nodeId = null;
+        };
+
+        const onGlobalPointerMove = (event) => {
+          document.documentElement.style.setProperty('--mx', `${event.clientX}px`);
+          document.documentElement.style.setProperty('--my', `${event.clientY}px`);
+
+          if (action.mode === 'drag-window') {
+            const win = state.ui.windows.find((item) => item.instanceId === action.targetWindowId);
+            if (!win) {
+              return;
+            }
+            const dx = event.clientX - action.startX;
+            const dy = event.clientY - action.startY;
+            const maxX = Math.max(0, window.innerWidth - win.width - 8);
+            const maxY = Math.max(52, window.innerHeight - win.height - 70);
+            win.x = Math.max(0, Math.min(maxX, action.startWinX + dx));
+            win.y = Math.max(52, Math.min(maxY, action.startWinY + dy));
+            return;
+          }
+
+          if (action.mode === 'resize-window') {
+            const win = state.ui.windows.find((item) => item.instanceId === action.targetWindowId);
+            if (!win) {
+              return;
+            }
+            const dx = event.clientX - action.startX;
+            const dy = event.clientY - action.startY;
+            const minW = 340;
+            const minH = 260;
+            const maxW = Math.max(360, window.innerWidth - win.x - 8);
+            const maxH = Math.max(280, window.innerHeight - win.y - 70);
+            win.width = Math.max(minW, Math.min(maxW, action.startWidth + dx));
+            win.height = Math.max(minH, Math.min(maxH, action.startHeight + dy));
+            return;
+          }
+
+          if (action.mode === 'drag-node' && currentPlan.value && boardRef.value) {
+            const node = currentPlan.value.nodes.find((item) => item.id === action.nodeId);
+            if (!node) {
+              return;
+            }
+            const rect = boardRef.value.getBoundingClientRect();
+            const maxX = rect.width - 190;
+            const maxY = rect.height - 96;
+            node.x = Math.max(0, Math.min(maxX, event.clientX - rect.left - action.nodeOffsetX));
+            node.y = Math.max(0, Math.min(maxY, event.clientY - rect.top - action.nodeOffsetY));
+          }
+        };
+
+        const toggleTheme = () => {
+          state.ui.theme = state.ui.theme === 'deepsea' ? 'industrial' : 'deepsea';
+          document.body.setAttribute('data-theme', state.ui.theme);
+        };
+
+        const addInboxTask = () => {
+          const title = state.inboxDraft.title.trim();
+          if (!title) {
+            return;
+          }
+          state.inbox.unshift({
+            id: createId(),
+            title,
+            priority: state.inboxDraft.priority,
+            progress: Math.max(0, Math.min(100, Number(state.inboxDraft.progress) || 0)),
+            ddl: state.inboxDraft.ddl || ''
+          });
+          state.inboxDraft.title = '';
+          state.inboxDraft.priority = 'P2';
+          state.inboxDraft.progress = 20;
+          state.inboxDraft.ddl = '';
+        };
+
+        const removeInboxTask = (id) => {
+          state.inbox = state.inbox.filter((item) => item.id !== id);
+        };
+
+        const addProjectPlan = () => {
+          const plan = createDefaultPlan(`新计划 ${state.project.plans.length + 1}`);
+          state.project.plans.push(plan);
+          state.project.currentPlanId = plan.id;
+        };
+
+        const duplicateCurrentPlan = () => {
+          if (!currentPlan.value) {
+            return;
+          }
+          const src = currentPlan.value;
+          const plan = {
+            id: createId(),
+            name: `${src.name} 副本`,
+            nodes: src.nodes.map((node) => ({ id: createId(), text: node.text, x: node.x, y: node.y })),
+            milestones: src.milestones.map((mile) => ({ id: createId(), title: mile.title, date: mile.date, status: mile.status }))
+          };
+          state.project.plans.push(plan);
+          state.project.currentPlanId = plan.id;
+        };
+
+        const removeCurrentPlan = () => {
+          if (state.project.plans.length <= 1) {
+            return;
+          }
+          state.project.plans = state.project.plans.filter((plan) => plan.id !== state.project.currentPlanId);
+          ensurePlanSelection();
+        };
+
+        const addBrainNode = () => {
+          if (!currentPlan.value) {
+            return;
+          }
+          const size = currentPlan.value.nodes.length;
+          currentPlan.value.nodes.push({
+            id: createId(),
+            text: '新节点',
+            x: 22 + (size % 4) * 44,
+            y: 20 + (size % 3) * 54
+          });
+        };
+
+        const removeBrainNode = (id) => {
+          if (!currentPlan.value) {
+            return;
+          }
+          currentPlan.value.nodes = currentPlan.value.nodes.filter((node) => node.id !== id);
+        };
+
+        const addMilestone = () => {
+          if (!currentPlan.value) {
+            return;
+          }
+          currentPlan.value.milestones.push({
+            id: createId(),
+            title: '新里程碑',
+            date: '',
+            status: 'planned'
+          });
+        };
+
+        const removeMilestone = (id) => {
+          if (!currentPlan.value) {
+            return;
+          }
+          currentPlan.value.milestones = currentPlan.value.milestones.filter((mile) => mile.id !== id);
+        };
+
+        const milestoneDot = (status) => {
+          if (status === 'done') {
+            return 'bg-emerald-300';
+          }
+          if (status === 'doing') {
+            return 'bg-cblue';
+          }
+          return 'bg-slate-500';
+        };
+
+        const addColdItem = () => {
+          const title = coldDraft.title.trim();
+          if (!title) {
+            return;
+          }
+          state.coldStorage.unshift({ id: createId(), title, note: '' });
+          coldDraft.title = '';
+        };
+
+        const removeColdItem = (id) => {
+          state.coldStorage = state.coldStorage.filter((item) => item.id !== id);
+        };
+
+        const addWeekSlot = () => {
+          state.planner.week.push({ id: createId(), day: `周${state.planner.week.length + 1}`, focus: '' });
+        };
+
+        const removeWeekSlot = (id) => {
+          state.planner.week = state.planner.week.filter((slot) => slot.id !== id);
+        };
+
+        const addMonthSlot = () => {
+          state.planner.month.push({ id: createId(), date: '', focus: '' });
+        };
+
+        const removeMonthSlot = (id) => {
+          state.planner.month = state.planner.month.filter((slot) => slot.id !== id);
+        };
+
+        const addTop3 = () => {
+          if (state.planner.top3.length >= 3) {
+            return;
+          }
+          state.planner.top3.push({ id: createId(), text: '' });
+        };
+
+        const removeTop3 = (id) => {
+          state.planner.top3 = state.planner.top3.filter((item) => item.id !== id);
+        };
+
+        const snapshotData = () => ({
+          version: 'v3',
+          exportedAt: new Date().toISOString(),
+          payload: {
+            ui: {
+              theme: state.ui.theme,
+              windows: state.ui.windows
+            },
+            inboxDraft: state.inboxDraft,
+            inbox: state.inbox,
+            project: state.project,
+            coldStorage: state.coldStorage,
+            planner: state.planner
+          }
+        });
+
+        const applySnapshotPayload = (payload) => {
+          if (!payload || typeof payload !== 'object') {
+            return;
+          }
+          deepMerge(state, payload);
+          ensurePlanSelection();
+          state.ui.windows = Array.isArray(state.ui.windows) ? state.ui.windows : [];
+          document.body.setAttribute('data-theme', state.ui.theme || 'deepsea');
+          zCounter.value = Math.max(12, ...state.ui.windows.map((w) => Number(w.z) || 0));
+        };
+
+        const toSyncCode = (obj) => {
+          const json = JSON.stringify(obj);
+          return btoa(unescape(encodeURIComponent(json)));
+        };
+
+        const fromSyncCode = (code) => {
+          const json = decodeURIComponent(escape(atob(code.trim())));
+          return JSON.parse(json);
+        };
+
+        const generateSyncCode = async () => {
+          const code = toSyncCode(snapshotData());
+          state.sync.syncCode = code;
+          try {
+            await navigator.clipboard.writeText(code);
+          } catch (err) {
+            console.warn('剪贴板写入失败', err);
+          }
+        };
+
+        const applySyncCode = () => {
+          if (!state.sync.syncCode.trim()) {
+            return;
+          }
+          try {
+            const parsed = fromSyncCode(state.sync.syncCode);
+            applySnapshotPayload(parsed.payload || parsed);
+          } catch (err) {
+            alert('同步码无效，请检查后重试');
+          }
+        };
+
+        const exportBackupFile = () => {
+          const blob = new Blob([JSON.stringify(snapshotData(), null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `dorenexus-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        const triggerImportFile = () => {
+          if (importFileRef.value) {
+            importFileRef.value.value = '';
+            importFileRef.value.click();
+          }
+        };
+
+        const onImportFile = (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) {
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const parsed = JSON.parse(reader.result);
+              applySnapshotPayload(parsed.payload || parsed);
+            } catch (err) {
+              alert('备份文件格式无效');
+            }
+          };
+          reader.readAsText(file);
+        };
+
+        const savePayload = () => ({
+          ui: state.ui,
+          inboxDraft: state.inboxDraft,
+          inbox: state.inbox,
+          project: state.project,
+          coldStorage: state.coldStorage,
+          planner: state.planner
+        });
+
+        let saveTimer = null;
+
+        const persist = () => {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(savePayload()));
+            isSaved.value = true;
+            lastSavedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+          } catch (err) {
+            console.error('保存失败', err);
+          }
+        };
+
+        const restore = () => {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            document.body.setAttribute('data-theme', state.ui.theme);
+            return;
+          }
+          try {
+            const parsed = JSON.parse(raw);
+            applySnapshotPayload(parsed);
+            isSaved.value = true;
+            lastSavedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+          } catch (err) {
+            console.error('恢复失败', err);
+          }
+        };
+
+        watch(
+          () => [state.ui, state.inboxDraft, state.inbox, state.project, state.coldStorage, state.planner],
+          () => {
+            isSaved.value = false;
+            if (saveTimer) {
+              clearTimeout(saveTimer);
+            }
+            saveTimer = setTimeout(persist, 130);
+          },
+          { deep: true }
+        );
+
+        const onResize = () => {
+          viewportWidth.value = window.innerWidth;
+        };
+
+        const onKeydown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          const top = sortedVisibleWindows.value[sortedVisibleWindows.value.length - 1];
+          if (!top) {
+            return;
+          }
+          minimizeWindow(top.instanceId);
+        };
+
+        onMounted(() => {
+          restore();
+          ensurePlanSelection();
+          window.addEventListener('pointermove', onGlobalPointerMove);
+          window.addEventListener('pointerup', stopPointerAction);
+          window.addEventListener('resize', onResize);
+          window.addEventListener('keydown', onKeydown);
+          if (!state.ui.windows.length) {
+            openWindow('inbox');
+          }
+        });
+
+        onBeforeUnmount(() => {
+          window.removeEventListener('pointermove', onGlobalPointerMove);
+          window.removeEventListener('pointerup', stopPointerAction);
+          window.removeEventListener('resize', onResize);
+          window.removeEventListener('keydown', onKeydown);
+        });
+
+        return {
+          state,
+          boardRef,
+          importFileRef,
+          coldDraft,
+          launchers,
+          isMobile,
+          sortedVisibleWindows,
+          sortedTaskbarWindows,
+          currentPlan,
+          isSaved,
+          lastSavedAt,
+          inboxMomentum,
+          top3Filled,
+          windowMeta,
+          tagStyle,
+          moduleDigest,
+          openWindow,
+          closeWindow,
+          minimizeWindow,
+          toggleWindowFromTaskbar,
+          bringToFront,
+          windowStyle,
+          taskbarButtonStyle,
+          startDragWindow,
+          startResizeWindow,
+          startDragNode,
+          toggleTheme,
+          addInboxTask,
+          removeInboxTask,
+          addProjectPlan,
+          duplicateCurrentPlan,
+          removeCurrentPlan,
+          addBrainNode,
+          removeBrainNode,
+          addMilestone,
+          removeMilestone,
+          milestoneDot,
+          addColdItem,
+          removeColdItem,
+          addWeekSlot,
+          removeWeekSlot,
+          addMonthSlot,
+          removeMonthSlot,
+          addTop3,
+          removeTop3,
+          generateSyncCode,
+          applySyncCode,
+          exportBackupFile,
+          triggerImportFile,
+          onImportFile
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
