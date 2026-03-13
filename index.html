@@ -462,7 +462,41 @@
                   </div>
                   <div>
                     <label class="mb-1 block text-xs text-slate-400">截止日期</label>
-                    <input v-model="state.inboxDraft.ddl" type="date" class="w-full rounded-xl border border-white/15 bg-slate-900/75 px-3 py-2 text-sm outline-none focus:border-cblue/70" />
+                    <div class="relative" data-inbox-calendar-root>
+                      <button @click="toggleInboxCalendar" type="button" class="flex w-full items-center justify-between rounded-xl border border-white/15 bg-slate-900/75 px-3 py-2 text-sm outline-none transition hover:border-cblue/50">
+                        <span :class="state.inboxDraft.ddl ? 'text-slate-100' : 'text-slate-400'">{{ state.inboxDraft.ddl || '点击选择日期' }}</span>
+                        <span class="text-xs text-cblue">日历</span>
+                      </button>
+
+                      <div v-if="inboxCalendarOpen" class="absolute z-[120] mt-2 w-[280px] rounded-xl border border-white/15 bg-slate-950/95 p-3 shadow-windowGlow backdrop-blur">
+                        <div class="mb-2 flex items-center justify-between">
+                          <button @click="shiftInboxCalendarMonth(-1)" type="button" class="rounded-md border border-white/15 px-2 py-1 text-xs text-slate-300 hover:bg-white/10">上月</button>
+                          <p class="font-display text-sm font-semibold text-slate-100">{{ inboxCalendarTitle }}</p>
+                          <button @click="shiftInboxCalendarMonth(1)" type="button" class="rounded-md border border-white/15 px-2 py-1 text-xs text-slate-300 hover:bg-white/10">下月</button>
+                        </div>
+
+                        <div class="mb-1 grid grid-cols-7 gap-1 text-center text-[11px] text-slate-400">
+                          <span v-for="w in ['一','二','三','四','五','六','日']" :key="w">{{ w }}</span>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-1">
+                          <button
+                            v-for="cell in inboxCalendarCells"
+                            :key="cell.key"
+                            type="button"
+                            @click="selectInboxCalendarDate(cell.ymd)"
+                            class="h-8 rounded-md border text-xs transition"
+                            :class="[
+                              cell.inCurrentMonth ? 'text-slate-100' : 'text-slate-500',
+                              cell.isSelected ? 'border-cblue bg-cblue text-slate-950' : 'border-white/10 hover:bg-white/10',
+                              cell.isToday && !cell.isSelected ? 'ring-1 ring-cblue/40' : ''
+                            ]"
+                          >
+                            {{ cell.day }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <button @click="addInboxTask" class="w-full rounded-xl bg-cblue/90 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-cblue">加入收件箱</button>
@@ -1031,6 +1065,26 @@
         const lastSavedAt = ref('');
         const viewportWidth = ref(window.innerWidth);
         const zCounter = ref(12);
+        const inboxCalendarOpen = ref(false);
+        const inboxCalendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const formatYmd = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+        const parseYmd = (value) => {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) {
+            return null;
+          }
+          const [y, m, d] = value.split('-').map((v) => Number(v));
+          const date = new Date(y, m - 1, d);
+          if (Number.isNaN(date.getTime())) {
+            return null;
+          }
+          return date;
+        };
+        const syncInboxCalendarMonth = () => {
+          const base = parseYmd(state.inboxDraft.ddl) || new Date();
+          inboxCalendarMonth.value = new Date(base.getFullYear(), base.getMonth(), 1);
+        };
 
         const action = reactive({
           mode: null,
@@ -1081,6 +1135,49 @@
 
         const top3Filled = computed(() => {
           return state.planner.top3.filter((item) => item.text && item.text.trim()).length;
+        });
+
+        const inboxCalendarTitle = computed(() => {
+          const d = inboxCalendarMonth.value;
+          return `${d.getFullYear()}年${d.getMonth() + 1}月`;
+        });
+
+        const inboxCalendarCells = computed(() => {
+          const monthDate = inboxCalendarMonth.value;
+          const year = monthDate.getFullYear();
+          const month = monthDate.getMonth();
+          const firstDayWeek = (new Date(year, month, 1).getDay() + 6) % 7;
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const daysInPrevMonth = new Date(year, month, 0).getDate();
+          const todayYmd = formatYmd(new Date());
+          const cells = [];
+
+          for (let i = 0; i < 42; i += 1) {
+            const dayNum = i - firstDayWeek + 1;
+            let date;
+            let inCurrentMonth = true;
+
+            if (dayNum < 1) {
+              date = new Date(year, month - 1, daysInPrevMonth + dayNum);
+              inCurrentMonth = false;
+            } else if (dayNum > daysInMonth) {
+              date = new Date(year, month + 1, dayNum - daysInMonth);
+              inCurrentMonth = false;
+            } else {
+              date = new Date(year, month, dayNum);
+            }
+
+            const ymd = formatYmd(date);
+            cells.push({
+              key: `${ymd}-${i}`,
+              day: date.getDate(),
+              ymd,
+              inCurrentMonth,
+              isToday: ymd === todayYmd,
+              isSelected: ymd === state.inboxDraft.ddl
+            });
+          }
+          return cells;
         });
 
         const windowMeta = (moduleId) => {
@@ -1231,6 +1328,40 @@
           };
         };
 
+        const getBoardElement = () => {
+          if (Array.isArray(boardRef.value)) {
+            const projectWindow = state.ui.windows
+              .filter((w) => w.moduleId === 'project' && !w.minimized)
+              .sort((a, b) => b.z - a.z)[0];
+            if (!projectWindow) {
+              return boardRef.value[0] || null;
+            }
+            const projectIndex = sortedVisibleWindows.value.findIndex((w) => w.instanceId === projectWindow.instanceId);
+            if (projectIndex >= 0 && boardRef.value[projectIndex]) {
+              return boardRef.value[projectIndex];
+            }
+            return boardRef.value[0] || null;
+          }
+          return boardRef.value;
+        };
+
+        const toggleInboxCalendar = () => {
+          if (!inboxCalendarOpen.value) {
+            syncInboxCalendarMonth();
+          }
+          inboxCalendarOpen.value = !inboxCalendarOpen.value;
+        };
+
+        const shiftInboxCalendarMonth = (delta) => {
+          const d = inboxCalendarMonth.value;
+          inboxCalendarMonth.value = new Date(d.getFullYear(), d.getMonth() + delta, 1);
+        };
+
+        const selectInboxCalendarDate = (ymd) => {
+          state.inboxDraft.ddl = ymd;
+          inboxCalendarOpen.value = false;
+        };
+
         const startDragWindow = (win, event) => {
           if (isMobile.value) {
             return;
@@ -1258,10 +1389,11 @@
         };
 
         const startDragNode = (node, event) => {
-          if (!boardRef.value) {
+          const boardElement = getBoardElement();
+          if (!boardElement) {
             return;
           }
-          const rect = boardRef.value.getBoundingClientRect();
+          const rect = boardElement.getBoundingClientRect();
           action.mode = 'drag-node';
           action.nodeId = node.id;
           action.nodeOffsetX = event.clientX - rect.left - node.x;
@@ -1308,16 +1440,31 @@
             return;
           }
 
-          if (action.mode === 'drag-node' && currentPlan.value && boardRef.value) {
+          const boardElement = getBoardElement();
+          if (action.mode === 'drag-node' && currentPlan.value && boardElement) {
             const node = currentPlan.value.nodes.find((item) => item.id === action.nodeId);
             if (!node) {
               return;
             }
-            const rect = boardRef.value.getBoundingClientRect();
+            const rect = boardElement.getBoundingClientRect();
             const maxX = rect.width - 190;
             const maxY = rect.height - 96;
             node.x = Math.max(0, Math.min(maxX, event.clientX - rect.left - action.nodeOffsetX));
             node.y = Math.max(0, Math.min(maxY, event.clientY - rect.top - action.nodeOffsetY));
+          }
+        };
+
+        const onGlobalPointerDown = (event) => {
+          if (!inboxCalendarOpen.value) {
+            return;
+          }
+          const target = event.target;
+          if (!target || typeof target.closest !== 'function') {
+            inboxCalendarOpen.value = false;
+            return;
+          }
+          if (!target.closest('[data-inbox-calendar-root]')) {
+            inboxCalendarOpen.value = false;
           }
         };
 
@@ -1627,6 +1774,7 @@
           restore();
           ensurePlanSelection();
           window.addEventListener('pointermove', onGlobalPointerMove);
+          window.addEventListener('pointerdown', onGlobalPointerDown);
           window.addEventListener('pointerup', stopPointerAction);
           window.addEventListener('resize', onResize);
           window.addEventListener('keydown', onKeydown);
@@ -1637,6 +1785,7 @@
 
         onBeforeUnmount(() => {
           window.removeEventListener('pointermove', onGlobalPointerMove);
+          window.removeEventListener('pointerdown', onGlobalPointerDown);
           window.removeEventListener('pointerup', stopPointerAction);
           window.removeEventListener('resize', onResize);
           window.removeEventListener('keydown', onKeydown);
@@ -1656,6 +1805,9 @@
           lastSavedAt,
           inboxMomentum,
           top3Filled,
+          inboxCalendarOpen,
+          inboxCalendarTitle,
+          inboxCalendarCells,
           windowMeta,
           tagStyle,
           moduleDigest,
@@ -1669,6 +1821,9 @@
           startDragWindow,
           startResizeWindow,
           startDragNode,
+          toggleInboxCalendar,
+          shiftInboxCalendarMonth,
+          selectInboxCalendarDate,
           toggleTheme,
           addInboxTask,
           removeInboxTask,
