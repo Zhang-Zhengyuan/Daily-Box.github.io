@@ -50,6 +50,7 @@
       --module-project: #5eead4;
       --module-cold: #94a3b8;
       --module-planner: #fbbf24;
+      --module-archive: #a3e635;
       --module-vault: #fb7185;
     }
 
@@ -71,6 +72,7 @@
       --module-project: #86efac;
       --module-cold: #cbd5e1;
       --module-planner: #facc15;
+      --module-archive: #bef264;
       --module-vault: #fda4af;
     }
 
@@ -279,6 +281,25 @@
 
     .timeline-line {
       background: linear-gradient(180deg, rgba(125, 211, 252, .55), rgba(94, 234, 212, .16));
+    }
+
+    .tree-branch {
+      margin-top: 8px;
+      margin-left: 8px;
+      border-left: 1px dashed rgba(148, 163, 184, .28);
+      padding-left: 10px;
+    }
+
+    .tree-fold-enter-active,
+    .tree-fold-leave-active {
+      transition: opacity .2s ease, transform .2s ease;
+      transform-origin: top;
+    }
+
+    .tree-fold-enter-from,
+    .tree-fold-leave-to {
+      opacity: 0;
+      transform: translateY(-4px);
     }
 
     .scrollbar-thin::-webkit-scrollbar {
@@ -500,13 +521,17 @@
                   </div>
                 </div>
                 <button @click="addInboxTask" class="w-full rounded-xl bg-cblue/90 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-cblue">加入收件箱</button>
+                <button @click="openWindow('archive')" type="button" class="w-full rounded-xl border border-[color:var(--module-archive)]/40 bg-[color:var(--module-archive)]/10 px-4 py-2 text-sm font-semibold text-[color:var(--module-archive)] hover:bg-[color:var(--module-archive)]/18">打开归档中心</button>
               </div>
             </div>
 
             <div class="panel xl:col-span-8">
               <div class="panel-head flex items-center justify-between px-3 py-2">
                 <p class="text-xs uppercase tracking-widest text-slate-400">任务队列</p>
-                <span class="rounded-full border border-cblue/35 px-2 py-1 text-[11px] text-cblue">{{ state.inbox.length }} 项</span>
+                <div class="flex items-center gap-2">
+                  <span class="rounded-full border border-cblue/35 px-2 py-1 text-[11px] text-cblue">{{ state.inbox.length }} 项</span>
+                  <button @click="openWindow('archive')" type="button" class="rounded-md border border-[color:var(--module-archive)]/45 px-2 py-1 text-[11px] text-[color:var(--module-archive)] hover:bg-[color:var(--module-archive)]/15">归档中心</button>
+                </div>
               </div>
               <div class="max-h-[560px] space-y-2 overflow-auto p-3 scrollbar-thin">
                 <div v-for="task in state.inbox" :key="task.id" class="rounded-xl border border-white/12 bg-slate-900/45 p-3">
@@ -532,6 +557,16 @@
                       <p class="mb-1 text-[11px] text-slate-400">日期</p>
                       <editable-date v-model="task.ddl" placeholder="点击设置"></editable-date>
                     </div>
+                  </div>
+
+                  <div v-if="Number(task.progress) >= 100" class="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-2 py-2">
+                    <span class="text-xs text-emerald-200">任务已完成，可归档到文件夹</span>
+                    <select v-model="task.archiveFolderId" class="min-w-[140px] rounded-md border border-white/12 bg-slate-950/80 px-2 py-1 text-xs text-slate-100 outline-none focus:border-emerald-300/60">
+                      <option disabled value="">选择文件夹</option>
+                      <option v-for="folder in state.inboxArchive.folders" :key="folder.id" :value="folder.id">{{ folder.name }}</option>
+                    </select>
+                    <button @click="archiveCompletedTask(task.id)" type="button" class="rounded-md border border-emerald-300/40 px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-400/15" :disabled="!task.archiveFolderId || !state.inboxArchive.folders.length">归档</button>
+                    <button v-if="!state.inboxArchive.folders.length" @click="openWindow('archive')" type="button" class="rounded-md border border-[color:var(--module-archive)]/40 px-2 py-1 text-xs text-[color:var(--module-archive)] hover:bg-[color:var(--module-archive)]/14">新建文件夹</button>
                   </div>
                 </div>
               </div>
@@ -675,6 +710,64 @@
                   </div>
                   <editable-text v-model="item.text" :multiline="true" placeholder="输入关键任务"></editable-text>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-else-if="win.moduleId === 'archive'" class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+            <div class="panel xl:col-span-4">
+              <div class="panel-head px-3 py-2" style="background: linear-gradient(180deg, rgba(163,230,53,.20), rgba(15,23,42,.35));">
+                <p class="text-xs uppercase tracking-widest text-slate-300">归档文件夹管理</p>
+              </div>
+              <div class="space-y-3 p-3">
+                <div class="rounded-xl border border-white/12 bg-slate-950/60 p-2">
+                  <label class="mb-1 block text-[11px] text-slate-400">新建文件夹</label>
+                  <div class="flex gap-2">
+                    <input v-model="state.inboxArchive.folderDraft" type="text" placeholder="例如：2026-Q1" class="w-full rounded-lg border border-white/12 bg-slate-900/75 px-2 py-1.5 text-xs outline-none focus:border-[color:var(--module-archive)]/60" />
+                    <button @click="addArchiveFolder" type="button" class="rounded-lg border border-[color:var(--module-archive)]/45 px-2 py-1.5 text-xs text-[color:var(--module-archive)] hover:bg-[color:var(--module-archive)]/14">创建</button>
+                  </div>
+                </div>
+
+                <div class="rounded-xl border border-white/10 bg-slate-950/55 p-3">
+                  <p class="text-xs text-slate-400">统计</p>
+                  <p class="mt-1 text-sm text-slate-200">文件夹 {{ state.inboxArchive.folders.length }} 个</p>
+                  <p class="text-sm text-slate-200">归档任务 {{ archivedTaskCount }} 项</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel xl:col-span-8">
+              <div class="panel-head px-3 py-2" style="background: linear-gradient(180deg, rgba(163,230,53,.15), rgba(15,23,42,.32));">
+                <p class="text-xs uppercase tracking-widest text-slate-300">树形归档视图</p>
+              </div>
+              <div class="max-h-[560px] space-y-2 overflow-auto p-3 scrollbar-thin">
+                <div v-for="folder in state.inboxArchive.folders" :key="folder.id" class="rounded-xl border border-white/12 bg-slate-900/45 p-2">
+                  <div class="flex items-center justify-between gap-2 rounded-lg bg-slate-950/45 px-2 py-2">
+                    <button @click="toggleArchiveFolder(folder.id)" type="button" class="flex min-w-0 flex-1 items-center gap-2 text-left">
+                      <span class="text-xs text-[color:var(--module-archive)] transition-transform" :class="isArchiveFolderOpen(folder.id) ? 'rotate-90' : ''">▶</span>
+                      <span class="truncate text-sm text-slate-100">{{ folder.name }}</span>
+                      <span class="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-400">{{ folder.tasks.length }}</span>
+                    </button>
+                    <button @click="removeArchiveFolder(folder.id)" type="button" class="rounded-md border border-crose/35 px-2 py-1 text-[10px] text-crose hover:bg-crose/10">删除</button>
+                  </div>
+
+                  <transition name="tree-fold">
+                    <div v-if="isArchiveFolderOpen(folder.id)" class="tree-branch">
+                      <div v-for="item in folder.tasks" :key="item.id" class="mb-2 rounded-lg border border-white/10 bg-slate-950/55 px-2 py-2">
+                        <div class="flex items-start justify-between gap-2">
+                          <div class="min-w-0">
+                            <p class="truncate text-xs text-slate-200">{{ item.title }}</p>
+                            <p class="mt-0.5 text-[10px] text-slate-500">{{ item.ddl || '无日期' }} · {{ item.priority }}</p>
+                          </div>
+                          <button @click="restoreArchivedTask(folder.id, item.id)" type="button" class="rounded-md border border-cblue/35 px-2 py-1 text-[10px] text-cblue hover:bg-cblue/10">恢复</button>
+                        </div>
+                      </div>
+                      <p v-if="!folder.tasks.length" class="text-[11px] text-slate-500">该文件夹暂无归档任务</p>
+                    </div>
+                  </transition>
+                </div>
+
+                <p v-if="!state.inboxArchive.folders.length" class="rounded-lg border border-white/10 bg-slate-950/45 px-3 py-2 text-xs text-slate-500">请先在左侧创建归档文件夹。</p>
               </div>
             </div>
           </section>
@@ -967,6 +1060,7 @@
         project: { width: 980, height: 660, x: 130, y: 94 },
         cold: { width: 620, height: 560, x: 220, y: 120 },
         planner: { width: 860, height: 610, x: 170, y: 112 },
+        archive: { width: 900, height: 610, x: 190, y: 104 },
         vault: { width: 760, height: 540, x: 200, y: 124 }
       };
       const p = base[moduleId] || base.inbox;
@@ -996,9 +1090,14 @@
           ddl: ''
         },
         inbox: [
-          { id: createId(), title: '完成本周目标拆解', priority: 'P1', progress: 52, ddl: '2026-03-16' },
-          { id: createId(), title: '整理里程碑风险与对策', priority: 'P2', progress: 34, ddl: '2026-03-18' }
+          { id: createId(), title: '完成本周目标拆解', priority: 'P1', progress: 52, ddl: '2026-03-16', archiveFolderId: '' },
+          { id: createId(), title: '整理里程碑风险与对策', priority: 'P2', progress: 34, ddl: '2026-03-18', archiveFolderId: '' }
         ],
+        inboxArchive: {
+          folderDraft: '',
+          folders: [],
+          openMap: {}
+        },
         project: {
           currentPlanId: planA.id,
           plans: [planA, planB]
@@ -1105,6 +1204,7 @@
           { id: 'project', title: 'Project Hub', subtitle: '多计划并行推进', badge: '项目' },
           { id: 'cold', title: 'Cold Storage', subtitle: '长期想法收纳区', badge: '冷存储' },
           { id: 'planner', title: 'Time Planner', subtitle: '周/月规划与 Top3', badge: '计划' },
+          { id: 'archive', title: 'Archive Center', subtitle: '归档文件夹树形视图', badge: '归档' },
           { id: 'vault', title: 'Sync Vault', subtitle: '跨设备同步与备份', badge: '同步' }
         ];
 
@@ -1135,6 +1235,10 @@
 
         const top3Filled = computed(() => {
           return state.planner.top3.filter((item) => item.text && item.text.trim()).length;
+        });
+
+        const archivedTaskCount = computed(() => {
+          return state.inboxArchive.folders.reduce((sum, folder) => sum + folder.tasks.length, 0);
         });
 
         const inboxCalendarTitle = computed(() => {
@@ -1186,6 +1290,7 @@
             project: { title: 'Project Hub', subtitle: '并行计划 + 白板路线图', short: 'Project' },
             cold: { title: 'Cold Storage', subtitle: '长期想法低干扰保存', short: 'Cold' },
             planner: { title: 'Time Planner', subtitle: '周月协同与三件要事', short: 'Planner' },
+            archive: { title: 'Archive Center', subtitle: '归档文件夹与树形任务', short: 'Archive' },
             vault: { title: 'Sync Vault', subtitle: '跨设备迁移与备份恢复', short: 'Vault' }
           };
           return map[moduleId] || map.inbox;
@@ -1197,6 +1302,7 @@
             project: { text: 'var(--module-project)', border: 'rgba(94,234,212,.45)', bg: 'rgba(94,234,212,.12)' },
             cold: { text: 'var(--module-cold)', border: 'rgba(148,163,184,.45)', bg: 'rgba(148,163,184,.12)' },
             planner: { text: 'var(--module-planner)', border: 'rgba(251,191,36,.45)', bg: 'rgba(251,191,36,.12)' },
+            archive: { text: 'var(--module-archive)', border: 'rgba(163,230,53,.45)', bg: 'rgba(163,230,53,.12)' },
             vault: { text: 'var(--module-vault)', border: 'rgba(251,113,133,.45)', bg: 'rgba(251,113,133,.12)' }
           };
           const c = colors[moduleId] || colors.inbox;
@@ -1219,6 +1325,9 @@
           }
           if (moduleId === 'planner') {
             return `${top3Filled.value}/3 已填写`;
+          }
+          if (moduleId === 'archive') {
+            return `${archivedTaskCount.value} 项已归档`;
           }
           return '同步码 + 备份文件';
         };
@@ -1483,7 +1592,8 @@
             title,
             priority: state.inboxDraft.priority,
             progress: Math.max(0, Math.min(100, Number(state.inboxDraft.progress) || 0)),
-            ddl: state.inboxDraft.ddl || ''
+            ddl: state.inboxDraft.ddl || '',
+            archiveFolderId: ''
           });
           state.inboxDraft.title = '';
           state.inboxDraft.priority = 'P2';
@@ -1493,6 +1603,98 @@
 
         const removeInboxTask = (id) => {
           state.inbox = state.inbox.filter((item) => item.id !== id);
+        };
+
+        const addArchiveFolder = () => {
+          const name = state.inboxArchive.folderDraft.trim();
+          if (!name) {
+            return;
+          }
+          const exists = state.inboxArchive.folders.some((folder) => folder.name.toLowerCase() === name.toLowerCase());
+          if (exists) {
+            return;
+          }
+          const folderId = createId();
+          state.inboxArchive.folders.unshift({
+            id: folderId,
+            name,
+            tasks: []
+          });
+          state.inboxArchive.openMap[folderId] = true;
+          state.inboxArchive.folderDraft = '';
+        };
+
+        const isArchiveFolderOpen = (folderId) => {
+          return state.inboxArchive.openMap[folderId] !== false;
+        };
+
+        const toggleArchiveFolder = (folderId) => {
+          state.inboxArchive.openMap[folderId] = !isArchiveFolderOpen(folderId);
+        };
+
+        const archiveCompletedTask = (taskId) => {
+          const taskIndex = state.inbox.findIndex((item) => item.id === taskId);
+          if (taskIndex < 0) {
+            return;
+          }
+          const task = state.inbox[taskIndex];
+          if (Number(task.progress) < 100) {
+            return;
+          }
+          const folder = state.inboxArchive.folders.find((item) => item.id === task.archiveFolderId);
+          if (!folder) {
+            return;
+          }
+          folder.tasks.unshift({
+            id: task.id,
+            title: task.title,
+            priority: task.priority,
+            progress: 100,
+            ddl: task.ddl,
+            archivedAt: new Date().toISOString()
+          });
+          state.inboxArchive.openMap[folder.id] = true;
+          state.inbox.splice(taskIndex, 1);
+        };
+
+        const restoreArchivedTask = (folderId, taskId) => {
+          const folder = state.inboxArchive.folders.find((item) => item.id === folderId);
+          if (!folder) {
+            return;
+          }
+          const idx = folder.tasks.findIndex((item) => item.id === taskId);
+          if (idx < 0) {
+            return;
+          }
+          const item = folder.tasks[idx];
+          state.inbox.unshift({
+            id: createId(),
+            title: item.title,
+            priority: item.priority || 'P3',
+            progress: 100,
+            ddl: item.ddl || '',
+            archiveFolderId: ''
+          });
+          folder.tasks.splice(idx, 1);
+        };
+
+        const removeArchiveFolder = (folderId) => {
+          const folder = state.inboxArchive.folders.find((item) => item.id === folderId);
+          if (!folder) {
+            return;
+          }
+          folder.tasks.forEach((item) => {
+            state.inbox.unshift({
+              id: createId(),
+              title: item.title,
+              priority: item.priority || 'P3',
+              progress: 100,
+              ddl: item.ddl || '',
+              archiveFolderId: ''
+            });
+          });
+          state.inboxArchive.folders = state.inboxArchive.folders.filter((item) => item.id !== folderId);
+          delete state.inboxArchive.openMap[folderId];
         };
 
         const addProjectPlan = () => {
@@ -1623,6 +1825,7 @@
             },
             inboxDraft: state.inboxDraft,
             inbox: state.inbox,
+            inboxArchive: state.inboxArchive,
             project: state.project,
             coldStorage: state.coldStorage,
             planner: state.planner
@@ -1710,6 +1913,7 @@
           ui: state.ui,
           inboxDraft: state.inboxDraft,
           inbox: state.inbox,
+          inboxArchive: state.inboxArchive,
           project: state.project,
           coldStorage: state.coldStorage,
           planner: state.planner
@@ -1744,7 +1948,7 @@
         };
 
         watch(
-          () => [state.ui, state.inboxDraft, state.inbox, state.project, state.coldStorage, state.planner],
+          () => [state.ui, state.inboxDraft, state.inbox, state.inboxArchive, state.project, state.coldStorage, state.planner],
           () => {
             isSaved.value = false;
             if (saveTimer) {
@@ -1805,6 +2009,7 @@
           lastSavedAt,
           inboxMomentum,
           top3Filled,
+          archivedTaskCount,
           inboxCalendarOpen,
           inboxCalendarTitle,
           inboxCalendarCells,
@@ -1827,6 +2032,12 @@
           toggleTheme,
           addInboxTask,
           removeInboxTask,
+          addArchiveFolder,
+          isArchiveFolderOpen,
+          toggleArchiveFolder,
+          archiveCompletedTask,
+          restoreArchivedTask,
+          removeArchiveFolder,
           addProjectPlan,
           duplicateCurrentPlan,
           removeCurrentPlan,
